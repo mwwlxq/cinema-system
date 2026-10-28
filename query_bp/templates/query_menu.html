@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Меню запросов</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="center">
+    <h2>Меню запросов</h2>
+    <p>Выберите запрос:</p>
+    <div class="menu">
+        {% for name, query in queries.items() %}
+            {% if has_access(query.endpoint) %}
+                <a href="{{ url_for(query.endpoint) }}">{{ query.title }}</a>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <div class="nav"><a href="{{ url_for('main_menu') }}">В главное меню</a></div>
+</div>
+</body>
+</html>

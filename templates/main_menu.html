@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Главное меню</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="center">
+    <h2>Информационная система «Кинотеатр»</h2>
+    <h3>Главное меню</h3>
+    <p class="user">Вы вошли как: {{ session['user_login'] }} ({{ group_names.get(session['user_group'], session['user_group']) }})</p>
+    <div class="menu">
+        {% if has_access('query_bp.query_menu') %}
+            <a href="{{ url_for('query_bp.query_menu') }}">Работа с запросами</a>
+        {% endif %}
+        <a href="{{ url_for('exit_func') }}">Выход</a>
+    </div>
+</div>
+</body>
+</html>

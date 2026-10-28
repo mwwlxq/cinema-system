@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Завершение работы</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="center">
+    <h2>Работа с системой завершена</h2>
+    <p>До свидания!</p>
+    <div class="nav"><a href="{{ url_for('auth_bp.auth_index') }}">Войти снова</a></div>
+</div>
+</body>
+</html>

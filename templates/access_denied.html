@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Доступ запрещён</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="center">
+    <h2>Доступ запрещён</h2>
+    <p class="error">Для вашей группы пользователей эта функция недоступна.</p>
+    <div class="nav"><a href="{{ url_for('main_menu') }}">В главное меню</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ query.title }}</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="center">
+    <h2>{{ query.title }}</h2>
+    {% if error_message %}
+        <p class="error">{{ error_message }}</p>
+    {% endif %}
+    <form action="{{ url_for(query.endpoint) }}" method="POST">
+        {% for field in query.fields %}
+            <p>
+                <label for="{{ field.name }}">{{ field.label }}:</label>
+                <input id="{{ field.name }}" name="{{ field.name }}" required
+                       type="{{ field.type }}"
+                       {% if field.type == 'number' %}min="0" step="{{ 1 if field.integer else 0.01 }}"{% endif %}
+                       value="{{ values.get(field.name, '') }}">
+            </p>
+        {% endfor %}
+        <button type="submit">Выполнить запрос</button>
+    </form>
+    <div class="nav">
+        <a href="{{ url_for('query_bp.query_menu') }}">Меню запросов</a>
+        <a href="{{ url_for('main_menu') }}">Главное меню</a>
+    </div>
+</div>
+</body>
+</html>
