@@ -4,6 +4,31 @@
     <meta charset="UTF-8">
     <title>Корзина</title>
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+    <style>
+        .btn-remove {
+            color: #d32f2f;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .btn-remove:hover {
+            text-decoration: underline;
+        }
+        .btn-checkout {
+            padding: 12px 25px;
+            font-size: 16px;
+            background-color: #1976D2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 20px;
+        }
+        .btn-checkout:hover {
+            background-color: #1565C0;
+        }
+    </style>
 </head>
 <body>
 <div class="center">
@@ -23,24 +48,28 @@
                 <th>Номер сеанса</th>
                 <th>Ряд</th>
                 <th>Место</th>
+                <th>Действие</th>
             </tr>
             {% for item in cart %}
             <tr>
                 <td>{{ item.session_id }}</td>
                 <td>{{ item.row }}</td>
                 <td>{{ item.seat }}</td>
+                <td>
+                    <a href="{{ url_for('business_bp.remove_from_cart', index=loop.index0) }}" class="btn-remove">Удалить</a>
+                </td>
             </tr>
             {% endfor %}
         </table>
 
-        <form method="POST" action="{{ url_for('business_bp.checkout') }}" style="margin-top: 20px;">
-            <button type="submit" style="padding: 10px 20px; font-size: 16px; background-color: #1976D2; color: white; border: none; cursor: pointer;">Оформить заказ</button>
+        <form method="POST" action="{{ url_for('business_bp.checkout') }}">
+            <button type="submit" class="btn-checkout">Оформить заказ</button>
         </form>
     {% else %}
-        <p>Ваша корзина пуста.</p>
+        <p style="text-align: center; color: #666; margin: 30px 0;">Ваша корзина пуста.</p>
     {% endif %}
 
-    <div class="nav">
+    <div class="nav" style="margin-top: 30px;">
         <a href="{{ url_for('business_bp.index') }}">← Вернуться к выбору фильмов</a>
         <a href="{{ url_for('main_menu') }}">Главное меню</a>
     </div>

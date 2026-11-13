@@ -1,0 +1,1 @@
+UPDATE ticket SET id_order = %s WHERE id_ticket = %s;

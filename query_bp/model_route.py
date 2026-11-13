@@ -52,11 +52,11 @@ def model_route(provider, user_input: dict, query: dict) -> ResultInfo:
     if error_message:
         return ResultInfo(result=[], status=False, error_message=error_message)
 
-    # 2. Формируем уникальный ключ для кэша
-    # Например: "schedule_by_date.sql:2026-05-11" или "free_tickets_by_price.sql:200.0_500.0"
+    # формируем уникальный ключ для кэша
+    # например: "schedule_by_date.sql:2026-05-11" или "free_tickets_by_price.sql:200.0_500.0"
     cache_key = f"{query['sql']}:{'_'.join(map(str, params))}"
 
-    # 3. ПРОВЕРЯЕМ REDIS (есть ли данные в кэше?)
+    # проверяем redis (есть ли данные в кэше?)
     try:
         cached_result = redis_client.get(cache_key)
         if cached_result:
@@ -80,7 +80,6 @@ def model_route(provider, user_input: dict, query: dict) -> ResultInfo:
 
     # сохраняем результат в redis на 5 мин(300 сек)
     try:
-        # json.dumps превращает список кортежей в строку, которую можно сохранить в redis
         redis_client.setex(cache_key, 300, json.dumps(result, default=str))
     except Exception as e:
         print(f"Ошибка Redis при записи: {e}")

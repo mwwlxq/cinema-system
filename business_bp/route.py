@@ -29,14 +29,11 @@ def sessions(movie_id):
 @group_required
 def seats(session_id):
     seats_list = get_free_seats(provider, session_id)
-
-    # Группируем места по рядам для удобного вывода: {1: [(1, 400), (2, 400)], 2: [...]}
     rows = {}
     for row, seat, price in seats_list:
         if row not in rows:
             rows[row] = []
         rows[row].append((seat, price))
-
     return render_template('b_hall_scheme.html', rows=rows, session_id=session_id)
 
 
@@ -44,8 +41,12 @@ def seats(session_id):
 @login_required
 @group_required
 def add_to_cart(session_id):
-    row = int(request.form.get('row'))
-    seat = int(request.form.get('seat'))
+    try:
+        row = int(request.form.get('row'))
+        seat = int(request.form.get('seat'))
+    except (TypeError, ValueError):
+        flash("Ошибка при добавлении билета: неверные данные", "error")
+        return redirect(url_for('business_bp.seats', session_id=session_id))
 
     if 'cart' not in session:
         session['cart'] = []
@@ -59,6 +60,18 @@ def add_to_cart(session_id):
         flash("Этот билет уже в корзине", "error")
 
     return redirect(url_for('business_bp.seats', session_id=session_id))
+
+
+@blueprint_business.route('/remove_from_cart/<int:index>')
+@login_required
+@group_required
+def remove_from_cart(index):
+    cart = session.get('cart', [])
+    if 0 <= index < len(cart):
+        cart.pop(index)
+        session['cart'] = cart
+        flash("Билет удален из корзины", "success")
+    return redirect(url_for('business_bp.cart'))
 
 
 @blueprint_business.route('/cart')
@@ -77,11 +90,21 @@ def checkout():
         flash("Корзина пуста", "error")
         return redirect(url_for('business_bp.cart'))
 
-    success, message = checkout_cart(provider, cart)
+    user_id = session.get('user_id')
+    success, message, id_order = checkout_cart(provider, cart, user_id)
 
     if success:
         session.pop('cart', None)
-        return render_template('b_success.html', message=message)
+        # Редирект на успех, чтобы при F5 не отправлялся повторный POST (PRG паттерн)
+        return redirect(url_for('business_bp.success', order_id=id_order, msg=message))
     else:
         flash(message, "error")
         return redirect(url_for('business_bp.cart'))
+
+
+@blueprint_business.route('/success/<int:order_id>')
+@login_required
+@group_required
+def success(order_id):
+    msg = request.args.get('msg', f'Заказ №{order_id} успешно оформлен!')
+    return render_template('b_success.html', message=msg)
