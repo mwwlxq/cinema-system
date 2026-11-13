@@ -1,1 +1,2 @@
-UPDATE ticket SET is_sold = true WHERE id_ticket = %s AND is_sold = false;
+UPDATE ticket SET is_sold = true, id_order = %s
+WHERE id_ticket = %s AND is_sold = false;

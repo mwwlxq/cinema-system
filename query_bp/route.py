@@ -9,8 +9,6 @@ from query_bp.model_route import model_route
 blueprint_query = Blueprint('query_bp', __name__, template_folder='templates')
 provider = SQLProvider(path.join(path.dirname(__file__), 'sql'))
 
-# Описание параметризованных запросов: все они выполняются по одной схеме
-# (форма ввода -> проверка параметров -> SQL-запрос -> таблица с результатом)
 QUERIES = {
     'schedule': {
         'title': 'Расписание сеансов на заданную дату',

@@ -6,8 +6,7 @@ from flask import Flask, render_template, session
 from access import has_access, login_required
 from auth_bp.route import blueprint_auth
 from query_bp.route import blueprint_query
-from business_bp.route import blueprint_business  # Импорт нового блюпринта
-
+from business_bp.route import blueprint_business
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'cinema-secret-key'
 
@@ -20,7 +19,7 @@ with open(path.join(base_dir, 'data', 'db_access.json'), encoding='utf-8') as f:
 # Регистрируем все blueprint'ы
 app.register_blueprint(blueprint_auth, url_prefix='/auth')
 app.register_blueprint(blueprint_query, url_prefix='/query')
-app.register_blueprint(blueprint_business, url_prefix='/business')  # Регистрация бизнес-процесса
+app.register_blueprint(blueprint_business, url_prefix='/business')
 
 app.jinja_env.globals['has_access'] = lambda endpoint: has_access(session.get('user_group'), endpoint)
 app.jinja_env.globals['group_names'] = {

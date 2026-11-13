@@ -1,94 +1,142 @@
-from database.select import select_list
-from database.modify import execute_transaction
-from database.redis_provider import redis_client
 import json
+from flask import current_app
+from database.select import select_list
+from database.DBcm import DBContextManager
+from database.redis_provider import redis_client
 
 
 def get_movies():
+    """Получение списка фильмов с кэшированием в Redis"""
     cache_key = "movies_all"
-    cached = redis_client.get(cache_key)
-    if cached:
-        return json.loads(cached)
-    result = select_list("SELECT id_movie, title FROM movie", [])
+    try:
+        cached = redis_client.get(cache_key)
+        if cached:
+            print(f"--- ВЗЯТО ИЗ КЭША REDIS: {cache_key} ---")
+            return json.loads(cached)
+    except Exception as e:
+        print(f"Ошибка Redis при чтении: {e}")
+
+    print(f"--- ЗАПРОС В POSTGRESQL: {cache_key} ---")
+    result = select_list("SELECT id_movie, title FROM movie ORDER BY title", [])
+
     if result:
-        redis_client.setex(cache_key, 300, json.dumps(result, default=str))
+        try:
+            redis_client.setex(cache_key, 300, json.dumps(result, default=str))
+        except Exception as e:
+            print(f"Ошибка Redis при записи: {e}")
     return result
 
 
 def get_sessions(movie_id):
+    """Получение сеансов (только будущих) с кэшированием"""
     cache_key = f"sessions_{movie_id}"
-    cached = redis_client.get(cache_key)
-    if cached:
-        return json.loads(cached)
-    # Убрали AND date >= CURRENT_DATE
-    result = select_list("SELECT id_session, date, time FROM session WHERE id_movie = %s ORDER BY date, time", [movie_id])
+    try:
+        cached = redis_client.get(cache_key)
+        if cached:
+            print(f"--- ВЗЯТО ИЗ КЭША REDIS: {cache_key} ---")
+            return json.loads(cached)
+    except Exception as e:
+        print(f"Ошибка Redis при чтении: {e}")
+
+    print(f"--- ЗАПРОС В POSTGRESQL: {cache_key} ---")
+    # фильтруем прошедшие сеансы и сортируем по дате и времени
+    sql = """
+        SELECT id_session, date, time 
+        FROM session 
+        WHERE id_movie = %s
+        ORDER BY date, time
+    """
+    result = select_list(sql, [movie_id])
+
     if result:
-        redis_client.setex(cache_key, 300, json.dumps(result, default=str))
+        try:
+            redis_client.setex(cache_key, 300, json.dumps(result, default=str))
+        except Exception as e:
+            print(f"Ошибка Redis при записи: {e}")
     return result
 
 
 def get_free_seats(provider, session_id):
+    """Получение свободных мест с кэшированием"""
     cache_key = f"free_seats.sql:{session_id}"
-    cached = redis_client.get(cache_key)
-    if cached:
-        return json.loads(cached)
+    try:
+        cached = redis_client.get(cache_key)
+        if cached:
+            print(f"--- ВЗЯТО ИЗ КЭША REDIS: {cache_key} ---")
+            return json.loads(cached)
+    except Exception as e:
+        print(f"Ошибка Redis при чтении: {e}")
 
+    print(f"--- ЗАПРОС В POSTGRESQL: {cache_key} ---")
     result = select_list(provider.get('free_seats.sql'), [session_id])
+
     if result:
-        redis_client.setex(cache_key, 300, json.dumps(result, default=str))
+        try:
+            redis_client.setex(cache_key, 300, json.dumps(result, default=str))
+        except Exception as e:
+            print(f"Ошибка Redis при записи: {e}")
     return result
 
 
 def checkout_cart(provider, cart: list, user_id: int) -> tuple[bool, str, int]:
-    """Возвращает (Успех, Сообщение, Номер заказа)"""
-    queries_to_execute = []
+    """
+    Оформление заказа в одной транзакции.
+    Возвращает: (Успех, Сообщение, Номер заказа)
+    """
+    tickets_to_buy = []
     total_price = 0.0
 
-    # 1. Проверяем места и считаем сумму
+    # получаем id_ticket и считаем итоговую сумму
     for item in cart:
-        check_res = select_list(provider.get('check_seat.sql'), [item['session_id'], item['row'], item['seat']])
-        if not check_res:
-            return False, f"Место {item['row']}-{item['seat']} уже продано!", 0
+        res = select_list(provider.get('check_seat.sql'), [item['session_id'], item['row'], item['seat']])
+        if not res:
+            return False, f"Место {item['row']}-{item['seat']} уже продано или не существует!", 0
 
-        id_ticket = check_res[0][0]
-        price = float(check_res[0][1])
+        id_ticket = res[0][0]
+        price = float(res[0][1])
         total_price += price
-        item['id_ticket'] = id_ticket  # Запоминаем id для транзакции
 
-    # 2. Выполняем транзакцию (сначала создаем заказ, потом обновляем билеты)
-    try:
-        from database.DBcm import DBContextManager
-        from flask import current_app
-        with DBContextManager(current_app.config['db_config']) as cursor:
-            if not cursor:
-                return False, "Ошибка подключения к БД", 0
+        tickets_to_buy.append({
+            'id_ticket': id_ticket,
+            'session_id': item['session_id']
+        })
 
-            # Создаем заказ
+    # выполняем всё в одной транзакции
+    with DBContextManager(current_app.config['db_config']) as cursor:
+        if cursor is None:
+            return False, "Ошибка подключения к БД", 0
+
+        try:
+            # создаем заказ и получаем его ID
             cursor.execute(provider.get('create_order.sql'), [user_id, total_price])
             id_order = cursor.fetchone()[0]
 
-            # Продаем билеты
-            for item in cart:
-                cursor.execute(provider.get('sell_ticket.sql'), [item['id_ticket']])
-                if cursor.rowcount == 0:
-                    raise Exception("Место уже продано!")
+            # продаем билеты и обновляем счетчики
+            for t in tickets_to_buy:
+                # Пытаемся продать. Условие AND is_sold = false защищает от двойной продажи
+                cursor.execute(provider.get('sell_ticket.sql'), [id_order, t['id_ticket']])
 
-                # Привязываем билет к заказу
-                cursor.execute(provider.get('link_ticket_to_order.sql'), [id_order, item['id_ticket']])
+                # проверяем, что обновилась ровно одна строка
+                if cursor.rowcount != 1:
+                    raise Exception("Место уже было куплено кем-то другим!")
 
-                # Обновляем счетчик
-                cursor.execute(provider.get('update_sold_count.sql'), [item['session_id']])
+                # увеличиваем sold_count для сеанса
+                cursor.execute(provider.get('update_sold_count.sql'), [t['session_id']])
 
-    except Exception as e:
-        print(f"Ошибка транзакции: {e}")
-        return False, "Ошибка при оформлении заказа (возможно, билет уже куплен).", 0
+            # Если мы дошли сюда, значит всё успешно.
+            # Контекстный менеджер (DBContextManager) автоматически сделает COMMIT при выходе из блока with.
 
-    # 3. Очистка кэша (безопасная)
+        except Exception as e:
+            print(f"Ошибка транзакции: {e}")
+            # При исключении контекстный менеджер сделает ROLLBACK
+            return False, "К сожалению, одно из мест уже купили. Заказ отменен, выберите другие места.", 0
+
+    # 3. Сброс кэша (выполняется только если транзакция успешно прошла)
     try:
-        for item in cart:
-            redis_client.delete(f"free_seats.sql:{item['session_id']}")
-            print(f"--- 🗑️ КЭШ REDIS ОЧИЩЕН ДЛЯ СЕАНСА: {item['session_id']} ---")
+        for t in tickets_to_buy:
+            redis_client.delete(f"free_seats.sql:{t['session_id']}")
+            print(f"---  КЭШ REDIS ОЧИЩЕН ДЛЯ СЕАНСА: {t['session_id']} ---")
     except Exception as e:
-        print(f"Ошибка Redis при очистке: {e}")  # Заказ уже оформлен, не рушим его из-за Redis
+        print(f"Ошибка Redis при очистке: {e}")
 
     return True, f"Заказ №{id_order} успешно оформлен! Сумма: {total_price} руб.", id_order
