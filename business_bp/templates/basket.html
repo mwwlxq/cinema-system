@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Корзина</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="center">
+    <h2>Ваша корзина</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <p class="{% if category == 'error' %}error{% else %}success{% endif %}">{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% if cart %}
+        <table>
+            <tr>
+                <th>Номер сеанса</th>
+                <th>Ряд</th>
+                <th>Место</th>
+            </tr>
+            {% for item in cart %}
+            <tr>
+                <td>{{ item.session_id }}</td>
+                <td>{{ item.row }}</td>
+                <td>{{ item.seat }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <form method="POST" action="{{ url_for('business_bp.checkout') }}" style="margin-top: 20px;">
+            <button type="submit" style="padding: 10px 20px; font-size: 16px; background-color: #1976D2; color: white; border: none; cursor: pointer;">Оформить заказ</button>
+        </form>
+    {% else %}
+        <p>Ваша корзина пуста.</p>
+    {% endif %}
+
+    <div class="nav">
+        <a href="{{ url_for('business_bp.index') }}">← Вернуться к выбору фильмов</a>
+        <a href="{{ url_for('main_menu') }}">Главное меню</a>
+    </div>
+</div>
+</body>
+</html>

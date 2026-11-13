@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Успешно</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="center">
+    <h2 style="color: green;">Успех!</h2>
+    <p>{{ message }}</p>
+
+    <div class="nav">
+        <a href="{{ url_for('business_bp.index') }}">Продать еще билеты</a>
+        <a href="{{ url_for('main_menu') }}">В главное меню</a>
+    </div>
+</div>
+</body>
+</html>

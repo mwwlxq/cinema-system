@@ -1,5 +1,17 @@
 {
-  "admin":   ["query_bp"],
-  "manager": ["query_bp.query_menu", "query_bp.schedule_by_date", "query_bp.free_count_by_session"],
-  "cashier": ["query_bp.query_menu", "query_bp.schedule_by_date", "query_bp.free_tickets_by_price"]
+  "admin": [
+    "query_bp",
+    "business_bp"
+  ],
+  "manager": [
+    "query_bp.query_menu",
+    "query_bp.schedule_by_date",
+    "query_bp.free_count_by_session"
+  ],
+  "cashier": [
+    "query_bp.query_menu",
+    "query_bp.schedule_by_date",
+    "query_bp.free_tickets_by_price",
+    "business_bp"
+  ]
 }
