@@ -1,1 +1,3 @@
-INSERT INTO orders (id_user, total_price) VALUES (%s, %s) RETURNING id_order;
+INSERT INTO orders (id_user, total_price)
+VALUES (%s, %s)
+RETURNING id_order;

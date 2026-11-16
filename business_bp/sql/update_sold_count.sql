@@ -1,1 +1,0 @@
-UPDATE session SET sold_count = sold_count + 1 WHERE id_session = %s;
