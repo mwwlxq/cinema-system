@@ -12,7 +12,6 @@
 
     <div class="menu">
         {% for movie in movies %}
-            <!-- Обращаемся к словарю по именам ключей: id_movie и title -->
             <a href="{{ url_for('business_bp.sessions', movie_id=movie.id_movie) }}">
                 {{ movie.title }}
             </a>
