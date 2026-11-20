@@ -30,9 +30,14 @@ def sessions(movie_id):
 def seats(session_id):
     seats_list = get_free_seats(provider, session_id)
     rows = {}
-    for row, seat, price in seats_list:
+    for item in seats_list:
+        row = item['row_number']
+        seat = item['seat_number']
+        price = item['price']
+
         if row not in rows:
             rows[row] = []
+
         rows[row].append((seat, price))
     return render_template('b_hall_scheme.html', rows=rows, session_id=session_id)
 

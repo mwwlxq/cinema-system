@@ -2,35 +2,26 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Продажа билетов - Выбор сеанса</title>
+    <title>Выбор сеанса</title>
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
 </head>
 <body>
 <div class="center">
     <h2>Выберите сеанс</h2>
 
-    <table>
-        <tr>
-            <th>Дата</th>
-            <th>Время</th>
-            <th>Действие</th>
-        </tr>
+    <div class="menu">
         {% for session in sessions %}
-        <tr>
-            <td>{{ session[1] }}</td>
-            <td>{{ session[2] }}</td>
-            <td>
-                <a href="{{ url_for('business_bp.seats', session_id=session[0]) }}">Выбрать места</a>
-            </td>
-        </tr>
+            <!-- Используем ключи id_session, date, time -->
+            <a href="{{ url_for('business_bp.seats', session_id=session.id_session) }}">
+                {{ session.date }} в {{ session.time }}
+            </a>
         {% else %}
-        <tr><td colspan="3">На этот фильм пока нет сеансов.</td></tr>
+            <p>На этот фильм пока нет сеансов.</p>
         {% endfor %}
-    </table>
+    </div>
 
-    <div class="nav">
-        <a href="{{ url_for('business_bp.index') }}">← Назад к фильмам</a>
-        <a href="{{ url_for('main_menu') }}">Главное меню</a>
+    <div class="nav" style="margin-top: 20px;">
+        <a href="{{ url_for('business_bp.index') }}">Назад к фильмам</a>
     </div>
 </div>
 </body>

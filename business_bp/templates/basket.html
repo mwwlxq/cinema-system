@@ -4,74 +4,49 @@
     <meta charset="UTF-8">
     <title>Корзина</title>
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
-    <style>
-        .btn-remove {
-            color: #d32f2f;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        .btn-remove:hover {
-            text-decoration: underline;
-        }
-        .btn-checkout {
-            padding: 12px 25px;
-            font-size: 16px;
-            background-color: #1976D2;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: 20px;
-        }
-        .btn-checkout:hover {
-            background-color: #1565C0;
-        }
-    </style>
 </head>
 <body>
 <div class="center">
-    <h2>Ваша корзина</h2>
+    <h2>Корзина</h2>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <p class="{% if category == 'error' %}error{% else %}success{% endif %}">{{ message }}</p>
-        {% endfor %}
-      {% endif %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p class="{{ 'error' if category == 'error' else 'success' }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
     {% endwith %}
 
     {% if cart %}
-        <table>
+        <table border="1" style="margin: 0 auto; border-collapse: collapse; width: 80%;">
             <tr>
-                <th>Номер сеанса</th>
+                <th>Сеанс</th>
                 <th>Ряд</th>
                 <th>Место</th>
                 <th>Действие</th>
             </tr>
             {% for item in cart %}
-            <tr>
-                <td>{{ item.session_id }}</td>
-                <td>{{ item.row }}</td>
-                <td>{{ item.seat }}</td>
-                <td>
-                    <a href="{{ url_for('business_bp.remove_from_cart', index=loop.index0) }}" class="btn-remove">Удалить</a>
-                </td>
-            </tr>
+                <tr>
+                    <!-- В корзине хранятся словари, поэтому обращаемся по ключам -->
+                    <td>{{ item.session_id }}</td>
+                    <td>{{ item.row }}</td>
+                    <td>{{ item.seat }}</td>
+                    <td>
+                        <a href="{{ url_for('business_bp.remove_from_cart', index=loop.index0) }}">Удалить</a>
+                    </td>
+                </tr>
             {% endfor %}
         </table>
 
-        <form method="POST" action="{{ url_for('business_bp.checkout') }}">
-            <button type="submit" class="btn-checkout">Оформить заказ</button>
+        <form action="{{ url_for('business_bp.checkout') }}" method="POST" style="margin-top: 20px;">
+            <button type="submit" class="btn">Оформить заказ</button>
         </form>
     {% else %}
-        <p style="text-align: center; color: #666; margin: 30px 0;">Ваша корзина пуста.</p>
+        <p>Ваша корзина пуста.</p>
     {% endif %}
 
-    <div class="nav" style="margin-top: 30px;">
-        <a href="{{ url_for('business_bp.index') }}">← Вернуться к выбору фильмов</a>
-        <a href="{{ url_for('main_menu') }}">Главное меню</a>
+    <div class="nav" style="margin-top: 20px;">
+        <a href="{{ url_for('business_bp.index') }}">Вернуться к выбору фильма</a>
     </div>
 </div>
 </body>

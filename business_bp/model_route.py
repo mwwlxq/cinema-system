@@ -261,15 +261,7 @@ def checkout_cart(
         )
 
         if not res:
-            return (
-                False,
-                f"Место {item['row']}-{item['seat']} "
-                f"уже продано!",
-                0
-            )
-
-        # select_list теперь возвращает словари,
-        # поэтому обращаемся по названию столбца.
+            return False, f"Место {item['row']}-{item['seat']} уже продано!", 0
 
         id_ticket = res[0]['id_ticket']
         price = float(res[0]['price'])

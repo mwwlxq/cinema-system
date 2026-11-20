@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Продажа билетов - Выбор фильма</title>
+    <title>Выбор фильма</title>
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
 </head>
 <body>
@@ -12,13 +12,16 @@
 
     <div class="menu">
         {% for movie in movies %}
-            <a href="{{ url_for('business_bp.sessions', movie_id=movie[0]) }}">{{ movie[1] }}</a>
+            <!-- Обращаемся к словарю по именам ключей: id_movie и title -->
+            <a href="{{ url_for('business_bp.sessions', movie_id=movie.id_movie) }}">
+                {{ movie.title }}
+            </a>
         {% else %}
-            <p>Нет доступных фильмов.</p>
+            <p>Список фильмов пуст.</p>
         {% endfor %}
     </div>
 
-    <div class="nav">
+    <div class="nav" style="margin-top: 20px;">
         <a href="{{ url_for('main_menu') }}">В главное меню</a>
     </div>
 </div>

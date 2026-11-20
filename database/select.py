@@ -1,10 +1,11 @@
+from flask import current_app
 from .DBcm import DBContextManager
 
 
 def select_list(_sql, user_list):
     result = []
 
-    with DBContextManager() as cursor:
+    with DBContextManager(current_app.config['db_config']) as cursor:
         if cursor is None:
             raise ValueError("Не удалось получить курсор БД")
 
