@@ -1,87 +1,87 @@
 import json
 from dataclasses import dataclass
-from datetime import date
 
 from database.select import select_list
-from database.redis_provider import redis_client  # Импорт нашего клиента Redis
+from database.redis_provider import redis_client
+
+
+CACHE_TTL = 300
 
 
 @dataclass
 class ResultInfo:
     result: list
     status: bool
-    error_message: str
+    error_message: str = ""
 
 
-def check_params(query: dict, user_input: dict) -> tuple[list, str]:
+def make_cache_key(query_name, params):
+    """
+    Формирует уникальный ключ Redis-кэша
+    для конкретного запроса и его параметров.
+    """
 
-    params = []
-    for field in query['fields']:
-        value = user_input.get(field['name'], '').strip()
-        if not value:
-            return [], f'Не заполнено поле «{field["label"]}»'
+    normalized_params = json.dumps(
+        params,
+        sort_keys=True,
+        ensure_ascii=False
+    )
 
-        if field['type'] == 'date':
-            try:
-                value = date.fromisoformat(value)
-            except ValueError:
-                return [], f'Поле «{field["label"]}» должно быть датой'
-
-        elif field['type'] == 'number':
-            try:
-                value = float(value)
-            except ValueError:
-                return [], f'Поле «{field["label"]}» должно быть числом'
-            if value < 0:
-                return [], f'Поле «{field["label"]}» не может быть отрицательным'
-            if field.get('integer'):
-                if not value.is_integer():
-                    return [], f'Поле «{field["label"]}» должно быть целым числом'
-                value = int(value)
-
-        params.append(value)
-
-    if query.get('range') and params[0] > params[1]:
-        return [], 'Нижняя граница диапазона больше верхней'
-    return params, ''
+    return f"query:{query_name}:{normalized_params}"
 
 
-def model_route(provider, user_input: dict, query: dict) -> ResultInfo:
-    # 1. Проверяем параметры (твой старый код)
-    params, error_message = check_params(query, user_input)
-    if error_message:
-        return ResultInfo(result=[], status=False, error_message=error_message)
+def model_route(provider, form_data, query):
+    """
+    Проверяет параметры запроса, получает данные из Redis
+    или PostgreSQL и сохраняет результат в Redis.
+    """
 
-    # формируем уникальный ключ для кэша
-    # например: "schedule_by_date.sql:2026-05-11" или "free_tickets_by_price.sql:200.0_500.0"
-    cache_key = f"{query['sql']}:{'_'.join(map(str, params))}"
+    # Проверка параметров
+    params = check_params(form_data, query)
 
-    # проверяем redis (есть ли данные в кэше?)
-    try:
-        cached_result = redis_client.get(cache_key)
-        if cached_result:
-            print(f"--- ВЗЯТО ИЗ КЭША REDIS: {cache_key} ---")
-            # рпевращаем строку JSON обратно в список Python
-            return ResultInfo(result=json.loads(cached_result), status=True, error_message='')
-    except Exception as e:
-        print(f"Ошибка Redis при чтении: {e}")
+    if not params.status:
+        return params
 
-    # ЕСЛИ В КЭШЕ НЕТ - ИДЕМ В POSTGRESQL
-    print(f"--- ЗАПРОС В POSTGRESQL: {cache_key} ---")
-    _sql = provider.get(query['sql'])
-    result = select_list(_sql, params)
+    # формируем уникальный ключ кэша:
+    # название SQL-запроса + его параметры
+    cache_key = make_cache_key(
+        query["sql"],
+        params.result
+    )
 
-    if result is None:
-        return ResultInfo(result=[], status=False,
-                          error_message='Ошибка при обращении к базе данных. Попробуйте позже')
-    if not result:
-        return ResultInfo(result=[], status=False,
-                          error_message='По заданным параметрам данные не найдены')
+    # проверяем Redis
 
-    # сохраняем результат в redis на 5 мин(300 сек)
-    try:
-        redis_client.setex(cache_key, 300, json.dumps(result, default=str))
-    except Exception as e:
-        print(f"Ошибка Redis при записи: {e}")
+    cached_result = redis_client.get(cache_key)
 
-    return ResultInfo(result=result, status=True, error_message='')
+    if cached_result is not None:
+
+        return ResultInfo(
+            result=json.loads(cached_result),
+            status=True
+        )
+
+    # если результата в Redis нет,выполняем запрос к PostgreSQL
+
+    sql = provider(query["sql"])
+
+    result = select_list(
+        sql,
+        list(params.result.values())
+    )
+
+    # сохраняем результат в Redis
+
+    redis_client.setex(
+        cache_key,
+        CACHE_TTL,
+        json.dumps(
+            result,
+            ensure_ascii=False,
+            default=str
+        )
+    )
+
+    return ResultInfo(
+        result=result,
+        status=True
+    )
